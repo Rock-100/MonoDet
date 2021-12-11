@@ -21,7 +21,7 @@ MonoRCNN is a monocular 3D object detection method for automonous driving, publi
 cd projects/MonoRCNN
 ./main.py --config-file config/MonoRCNN_KITTI.yaml --num-gpus 1 --resume --eval-only
 ```
-Set `TEST.VISUALIZE` in [MonoRCNN_KITTI.yaml](projects/MonoRCNN/config/MonoRCNN_KITTI.yaml) as `True` to visualize 3D object detection results ( saved in `output/evaluation/test/visualization`).
+Set `TEST.VISUALIZE` in [MonoRCNN_KITTI.yaml](projects/MonoRCNN/config/MonoRCNN_KITTI.yaml) as `True` to visualize 3D object detection results (saved in `output/evaluation/test/visualization`).
 
 ## Training
 ```
