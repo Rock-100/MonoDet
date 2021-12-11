@@ -30,7 +30,7 @@ cd projects/MonoRCNN
 ```
 
 ## Citation
-If you find this project useful in your research, please consider citing:
+If you find this project useful in your research, please cite:
 
 ```
 @inproceedings{MonoRCNN_ICCV21,
