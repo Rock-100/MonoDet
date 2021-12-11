@@ -1,7 +1,7 @@
 ## KITTI
 We take the KITTI val1 split as an example to show how to prepare the training and test subset.
 
-1. Download the training dataset of KITTI monocular 3D object detection task, and organize the downloaded files as follows:
+1. Download the training dataset of the KITTI monocular 3D object detection task, and organize the downloaded files as follows:
 ```
 ├── KITTI
 │   ├── training
