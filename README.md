@@ -49,4 +49,6 @@ If you find this project useful in your research, please cite:
 x.shi19@imperial.ac.uk
 
 ## Acknowledgement
-I build this project based on [Detectron2](https://github.com/facebookresearch/detectron2), and also refer to [M3D-RPN](https://github.com/garrickbrazil/M3D-RPN) and [MMDetection](https://github.com/open-mmlab/mmdetection).
+* [Detectron2](https://github.com/facebookresearch/detectron2)
+* [M3D-RPN](https://github.com/garrickbrazil/M3D-RPN)
+* [MMDetection](https://github.com/open-mmlab/mmdetection)
