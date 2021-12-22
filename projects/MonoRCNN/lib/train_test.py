@@ -223,7 +223,7 @@ def load_json(json_file, image_root, cfg):
             assert obj["bbox"][0] >= 0 and obj["bbox"][1] >= 0 and obj["bbox"][2] <= record["width"] and obj["bbox"][3] <= record["height"]
     
             '''
-            To ignore fully occluded objects during training, detectron2/data/build.py(L55), detectron2/modeling/proposal_generator/rpn.py(L291), 
+            To ignore fully occluded objects during training, detectron2/data/build.py(L55), detectron2/modeling/proposal_generator/rpn.py(L292), 
             and detectron2/modeling/roi_heads/roi_heads.py(L272) have been modified.
             '''
             if (cats[anno["category_id"]]['name'] == 'DontCare') or \
