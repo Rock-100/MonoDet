@@ -15,7 +15,7 @@ MonoRCNN is a monocular 3D object detection method for automonous driving, publi
 * PyTorch 1.5.0 
 * Detectron2 0.1.3 
 
-Please use the Detectron2 included in this project. To ignore fully occluded objects, [`build.py`](detectron2/data/build.py#L55), [`rpn.py`](detectron2/modeling/proposal_generator/rpn.py#L291), and [`roi_heads.py`](detectron2/modeling/roi_heads/roi_heads.py#L272) have been modified.
+Please use the Detectron2 included in this project. To ignore fully occluded objects during training, [`build.py`](detectron2/data/build.py#L55), [`rpn.py`](detectron2/modeling/proposal_generator/rpn.py#L291), and [`roi_heads.py`](detectron2/modeling/roi_heads/roi_heads.py#L272) have been modified.
 
 ## Dataset Preparation
 * [KITTI](projects/KITTI/README.md)
