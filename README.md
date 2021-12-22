@@ -20,6 +20,15 @@ MonoRCNN is a monocular 3D object detection method for automonous driving, publi
 
 ## Model & Log
 * [KITTI val1 split](https://drive.google.com/file/d/1syKiGoEa_qhNgqdWZEEivPdlAOzYxK9G/view?usp=sharing)
+Organize the downloaded files as follows:
+```
+├── projects
+│   ├── MonoRCNN
+│   │   ├── output
+│   │   │   ├── model
+│   │   │   ├── log.txt
+│   │   │   ├── ...
+```
 
 ## Test
 ```
