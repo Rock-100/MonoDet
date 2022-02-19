@@ -6,7 +6,7 @@ MonoRCNN is a monocular 3D object detection method for automonous driving, publi
 <img src='images/KITTI_testset_000181.png' width=809 height=188>
 <img src='images/KITTI_testset_000215.png' width=809 height=188>
 
-## Methodology
+## Distance Decomposition
 <img src='images/comp.png' width=809 height=255>
 
 ## Related Link
