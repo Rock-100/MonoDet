@@ -1,6 +1,10 @@
 # MonoRCNN
 MonoRCNN is a monocular 3D object detection method for automonous driving, published at ICCV 2021. This project is an implementation of MonoRCNN.
 
+## Related Link
+* [ICCV paper](https://openaccess.thecvf.com/content/ICCV2021/html/Shi_Geometry-Based_Distance_Decomposition_for_Monocular_3D_Object_Detection_ICCV_2021_paper.html)
+* [KITTI video demo](https://www.youtube.com/watch?v=46lToJSagcg)
+
 ## Visualization
 <img src='images/KITTI_testset_000095.png' width=809 height=188>
 <img src='images/KITTI_testset_000181.png' width=809 height=188>
@@ -8,10 +12,6 @@ MonoRCNN is a monocular 3D object detection method for automonous driving, publi
 
 ## Distance Decomposition
 <img src='images/comp.png' width=809 height=255>
-
-## Related Link
-* [ICCV paper](https://openaccess.thecvf.com/content/ICCV2021/html/Shi_Geometry-Based_Distance_Decomposition_for_Monocular_3D_Object_Detection_ICCV_2021_paper.html)
-* [KITTI video demo](https://www.youtube.com/watch?v=46lToJSagcg)
 
 ## Installation
 
