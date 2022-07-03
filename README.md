@@ -2,8 +2,9 @@
 MonoRCNN is a monocular 3D object detection method for automonous driving, published at ICCV 2021. This project is an implementation of MonoRCNN.
 
 ## Related Link
-* [ICCV paper](https://arxiv.org/abs/2104.03775)
-* [KITTI video demo](https://www.youtube.com/watch?v=46lToJSagcg)
+* [Video demo (KITTI)](https://www.youtube.com/watch?v=46lToJSagcg)
+* [Paper (ICCV 2021)](https://arxiv.org/abs/2104.03775)
+* [KITTI benchmark (ICCV 2021)](http://www.cvlibs.net/datasets/kitti/eval_object_detail.php?&result=06e0aacbeb8de57a09d2a3557907064aa501048f)
 
 ## Visualization
 <img src='images/KITTI_testset_000095.png' width=809 height=188>
