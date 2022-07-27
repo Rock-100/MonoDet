@@ -82,13 +82,13 @@ def aug_resize(image, input_size, annos=None):
     # resize
     image = cv2.resize(image, (w, h))
     assert image.shape[0] == input_size[0] and image.shape[1] <= input_size[1]
-    
-    # pad out
-    if image.shape[1] < input_size[1]:
-        padW = input_size[1] - image.shape[1]
-        image = np.pad(image, [(0, 0), (0, padW), (0, 0)], 'edge')
-    
+   
     if annos is not None:
+        # pad out
+        if image.shape[1] < input_size[1]:
+            padW = input_size[1] - image.shape[1]
+            image = np.pad(image, [(0, 0), (0, padW), (0, 0)], 'constant')
+        
         for i in range(len(annos)):
             for j in range(4):
                 annos[i]['bbox'][j] *= scale_factor
