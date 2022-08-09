@@ -88,9 +88,7 @@ def add_monodet_config(cfg: CN):
     _C.MODEL.ROI_ATT_HEAD.CONV_DIM = 256
     # Normalization method for the convolution layers.
     # Options: "" (no norm), "GN", "SyncBN".
-    _C.MODEL.ROI_ATT_HEAD.NORM = ""  
-    _C.MODEL.ROI_ATT_HEAD.DIM_LOSS_WEIGHT = 1.0
-    _C.MODEL.ROI_ATT_HEAD.YAW_LOSS_WEIGHT = 1.0
+    _C.MODEL.ROI_ATT_HEAD.NORM = ""
     _C.MODEL.ROI_ATT_HEAD.KPT_LOSS_WEIGHT = 1.0
 
     # ---------------------------------------------------------------------------- #

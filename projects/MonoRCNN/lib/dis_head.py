@@ -159,7 +159,7 @@ class DISHead(nn.Module):
         if self.training:
             return {
                 "loss_H": self.H_rcnn_loss(pred_Hs, instances),
-                "loss_hrec": self.hrec_rcnn_loss(pred_hrecs, instances)
+                "loss_hrec": self.hrec_rcnn_loss(pred_hrecs, instances),
             }
         else:
             self.H_rcnn_inference(pred_Hs, instances)

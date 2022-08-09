@@ -42,7 +42,7 @@ class ATTHead(nn.Module):
     def __init__(
         self, input_shape: ShapeSpec, *, conv_dims: List[int], fc_dims: List[int], conv_norm="", \
         smooth_l1_beta=0, num_classes=1, num_regions=1, \
-        dim_loss_weight=1.0, yaw_loss_weight=1.0, kpt_loss_weight=1.0, \
+        kpt_loss_weight=1.0, \
     ):
         """
         NOTE: this interface is experimental.
@@ -89,23 +89,21 @@ class ATTHead(nn.Module):
             weight_init.c2_xavier_fill(layer)
 
         self.smooth_l1_beta = smooth_l1_beta
-        self.dim_loss_weight = dim_loss_weight
-        self.yaw_loss_weight = yaw_loss_weight
         self.kpt_loss_weight = kpt_loss_weight
 
         self.num_classes = num_classes
         self.num_regions = num_regions
 
-        self.dim_layer = Linear(fc_dim_final, self.num_classes * 3)
+        self.dim_layer = Linear(fc_dim_final, self.num_classes * (3 + 1))
         nn.init.normal_(self.dim_layer.weight, std=0.001)
         nn.init.constant_(self.dim_layer.bias, 0)
 
-        self.yaw_layer = Linear(fc_dim_final, self.num_classes * 2)
+        self.yaw_layer = Linear(fc_dim_final, self.num_classes * (2 + 1))
         nn.init.normal_(self.yaw_layer.weight, std=0.001)
         nn.init.constant_(self.yaw_layer.bias, 0)
 
         self.num_kpts = 9
-        self.kpt_layer = Linear(fc_dim_final, self.num_classes * 2 * self.num_kpts)
+        self.kpt_layer = Linear(fc_dim_final, self.num_classes * (2 * self.num_kpts + 1))
         nn.init.normal_(self.kpt_layer.weight, std=0.001)
         nn.init.constant_(self.kpt_layer.bias, 0)
 
@@ -124,8 +122,6 @@ class ATTHead(nn.Module):
             "smooth_l1_beta": cfg.MODEL.ROI_ATT_HEAD.SMOOTH_L1_BETA,
             "num_classes": cfg.MODEL.ROI_HEADS.NUM_CLASSES,
             "num_regions": cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE * cfg.SOLVER.IMS_PER_BATCH,
-            "dim_loss_weight": cfg.MODEL.ROI_ATT_HEAD.DIM_LOSS_WEIGHT,
-            "yaw_loss_weight": cfg.MODEL.ROI_ATT_HEAD.YAW_LOSS_WEIGHT,
             "kpt_loss_weight": cfg.MODEL.ROI_ATT_HEAD.KPT_LOSS_WEIGHT,
         }
 
@@ -171,10 +167,12 @@ class ATTHead(nn.Module):
         pred_yaws = self.yaw_layer(x)
         pred_kpts = self.kpt_layer(x)
         if self.training:
+            loss_cen, loss_kpt = self.kpt_rcnn_loss(pred_kpts, instances)
             return {
-                "loss_dim": self.dim_rcnn_loss(pred_dims, instances) * self.dim_loss_weight,
-                "loss_yaw": self.yaw_rcnn_loss(pred_yaws, instances) * self.yaw_loss_weight,
-                "loss_kpt": self.kpt_rcnn_loss(pred_kpts, instances) * self.kpt_loss_weight,
+                "loss_dim": self.dim_rcnn_loss(pred_dims, instances),
+                "loss_yaw": self.yaw_rcnn_loss(pred_yaws, instances),
+                "loss_cen": loss_cen,
+                "loss_kpt": loss_kpt * self.kpt_loss_weight,
             }
         else:
             self.dim_rcnn_inference(pred_dims, instances)
@@ -190,28 +188,33 @@ class ATTHead(nn.Module):
             gt_classes.append(instances_per_image.gt_classes)
         gt_dims = cat(gt_dims, dim=0)
         gt_classes = cat(gt_classes, dim=0)
-        pred_dims_trans = torch.cuda.FloatTensor(gt_dims.shape[0], 3)
+
+        pred_dims_trans = torch.cuda.FloatTensor(gt_dims.shape[0], 4)
         for i in range(self.num_classes):
             index = gt_classes == i
-            pred_dims_trans[index, :] = pred_dims[index, 3 * i:3 * (i + 1)]
+            pred_dims_trans[index, :] = pred_dims[index, 4 * i:4 * (i + 1)]
+        pred_dims_trans_uncer = pred_dims_trans[:, 3:]
+        pred_dims_trans = pred_dims_trans[:, :3]
+
         loss_dim = smooth_l1_loss(
             pred_dims_trans,
             gt_dims,
             self.smooth_l1_beta,
-            reduction="sum",
+            reduction="none",
         )
-        return loss_dim / self.num_regions
+        loss_dim = loss_dim * ((-pred_dims_trans_uncer).exp())
+        return (loss_dim.sum() + pred_dims_trans_uncer.sum()) / self.num_regions
 
     def dim_rcnn_inference(self, pred_dims, pred_instances):
         num_instances_per_image = [len(i) for i in pred_instances]
         pred_dims = pred_dims.split(num_instances_per_image)
         for dims_per_image, instances_per_image in zip(pred_dims, pred_instances):
             classes_per_image = instances_per_image.pred_classes
-            pred_dims_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 3)
+            pred_dims_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 4)
             for i in range(self.num_classes):
                 index = classes_per_image == i
-                pred_dims_per_image[index, :] = dims_per_image[index, 3 * i:3 * (i + 1)]
-            instances_per_image.pred_dims = pred_dims_per_image
+                pred_dims_per_image[index, :] = dims_per_image[index, 4 * i:4 * (i + 1)]
+            instances_per_image.pred_dims = pred_dims_per_image[:, :3]
 
     def yaw_rcnn_loss(self, pred_yaws, instances):
         gt_yaws = []
@@ -225,28 +228,31 @@ class ATTHead(nn.Module):
         gt_yaws_trans[:, 0] = torch.sin(gt_yaws)
         gt_yaws_trans[:, 1] = torch.cos(gt_yaws)
 
-        pred_yaws_trans = torch.cuda.FloatTensor(gt_yaws_trans.shape[0], 2)
+        pred_yaws_trans = torch.cuda.FloatTensor(gt_yaws_trans.shape[0], 3)
         for i in range(self.num_classes):
             index = gt_classes == i
-            pred_yaws_trans[index, :] = pred_yaws[index, 2 * i:2 * (i + 1)]
+            pred_yaws_trans[index, :] = pred_yaws[index, 3 * i:3 * (i + 1)]
+        pred_yaws_trans_uncer = pred_yaws_trans[:, 2:]
+        pred_yaws_trans = pred_yaws_trans[:, :2]
 
         loss_yaw = smooth_l1_loss(
             pred_yaws_trans,
             gt_yaws_trans,
             self.smooth_l1_beta,
-            reduction="sum",
+            reduction="none",
         )
-        return loss_yaw / self.num_regions
+        loss_yaw = loss_yaw * ((-pred_yaws_trans_uncer).exp())
+        return (loss_yaw.sum() + pred_yaws_trans_uncer.sum()) / self.num_regions
 
     def yaw_rcnn_inference(self, pred_yaws, pred_instances):
         num_instances_per_image = [len(i) for i in pred_instances]
         pred_yaws = pred_yaws.split(num_instances_per_image)
         for yaws_per_image, instances_per_image in zip(pred_yaws, pred_instances):
             classes_per_image = instances_per_image.pred_classes
-            pred_yaws_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 2)
+            pred_yaws_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 3)
             for i in range(self.num_classes):
                 index = classes_per_image == i
-                pred_yaws_per_image[index, :] = yaws_per_image[index, 2 * i:2 * (i + 1)]
+                pred_yaws_per_image[index, :] = yaws_per_image[index, 3 * i:3 * (i + 1)]
             instances_per_image.pred_yaws = torch.atan2(pred_yaws_per_image[:, 0:1], pred_yaws_per_image[:, 1:2])
 
     def convert_kpts(self, gt_kpts, proposal_boxes):
@@ -283,30 +289,39 @@ class ATTHead(nn.Module):
         gt_classes = cat(gt_classes, dim=0)
         proposal_boxes = cat(proposal_boxes, dim=0)
         gt_kpts_trans = self.convert_kpts(gt_kpts, proposal_boxes)
-        pred_kpts_trans = torch.cuda.FloatTensor(pred_kpts.shape[0], self.num_kpts * 2)
+
+        pred_kpts_trans = torch.cuda.FloatTensor(pred_kpts.shape[0], self.num_kpts * 2 + 1)
         for i in range(self.num_classes):
             index = gt_classes == i
-            pred_kpts_trans[index, :] = pred_kpts[index, self.num_kpts * 2 * i:self.num_kpts * 2 * (i + 1)]
+            pred_kpts_trans[index, :] = pred_kpts[index, (self.num_kpts * 2 + 1) * i:(self.num_kpts * 2 + 1) * (i + 1)]
+        pred_cen_trans_uncer = pred_kpts_trans[:, self.num_kpts * 2:]
+        pred_kpts_trans = pred_kpts_trans[:, :self.num_kpts * 2]
         
-        loss_kpts = smooth_l1_loss(
-            pred_kpts_trans,
-            gt_kpts_trans,
+        loss_kpt = smooth_l1_loss(
+            pred_kpts_trans[:, :16],
+            gt_kpts_trans[:, :16],
             self.smooth_l1_beta,
-            reduction="sum",
+            reduction="none",
         )
-        
-        return loss_kpts / (self.num_regions * self.num_kpts)
+        loss_cen = smooth_l1_loss(
+            pred_kpts_trans[:, 16:],
+            gt_kpts_trans[:, 16:],
+            self.smooth_l1_beta,
+            reduction="none",
+        )
+        loss_cen = loss_cen * ((-pred_cen_trans_uncer).exp())
+        return (loss_cen.sum() + pred_cen_trans_uncer.sum()) / self.num_regions, loss_kpt.sum() / (self.num_regions * self.num_kpts)
 
     def kpt_rcnn_inference(self, pred_kpts, pred_instances):
         num_instances_per_image = [len(i) for i in pred_instances]
         pred_kpts = pred_kpts.split(num_instances_per_image)
         for kpts_per_image, instances_per_image in zip(pred_kpts, pred_instances):
             classes_per_image = instances_per_image.pred_classes
-            pred_kpts_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], self.num_kpts * 2)
+            pred_kpts_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], self.num_kpts * 2 + 1)
             for i in range(self.num_classes):
                 index = classes_per_image == i
-                pred_kpts_per_image[index, :] = kpts_per_image[index, self.num_kpts * 2 * i:self.num_kpts * 2 * (i + 1)]
-            instances_per_image.pred_proj_kpts = self.convert_kpts_inv(pred_kpts_per_image, instances_per_image.pred_boxes.tensor)
+                pred_kpts_per_image[index, :] = kpts_per_image[index, (self.num_kpts * 2 + 1) * i:(self.num_kpts * 2 + 1) * (i + 1)]
+            instances_per_image.pred_proj_kpts = self.convert_kpts_inv(pred_kpts_per_image[:, :self.num_kpts * 2], instances_per_image.pred_boxes.tensor)
 
 
     @property

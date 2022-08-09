@@ -8,7 +8,7 @@ TRAINING:
   PMD_PROB: 0.5
   MIN_VIS: 0.3
   MIN_HEIGHT: 22
-  POS_LABELS: ['Car']
+  POS_LABELS: ['Car', 'Pedestrian', 'Cyclist']
 TEST:
   VISUALIZE: False
 DATASETS:
@@ -50,7 +50,7 @@ MODEL:
     NAME: "ALLROIHeads"
     IN_FEATURES: ["p2", "p3", "p4", "p5"]
     BATCH_SIZE_PER_IMAGE: 512
-    NUM_CLASSES: 1
+    NUM_CLASSES: 3
     SCORE_THRESH_TEST: 0.5
     NMS_THRESH_TEST: 0.5
   ROI_BOX_HEAD:
@@ -63,8 +63,6 @@ MODEL:
     NUM_FC: 2
     FC_DIM: 1024
     POOLER_RESOLUTION: 7
-    DIM_LOSS_WEIGHT: 3.0
-    YAW_LOSS_WEIGHT: 5.0
     KPT_LOSS_WEIGHT: 5.0
   ROI_DIS_HEAD:
     NAME: "DISHead"
