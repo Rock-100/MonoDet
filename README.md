@@ -7,12 +7,18 @@ MonoRCNN is a monocular 3D object detection method for automonous driving, publi
 * [KITTI benchmark (ICCV 2021)](http://www.cvlibs.net/datasets/kitti/eval_object_detail.php?&result=06e0aacbeb8de57a09d2a3557907064aa501048f)
 
 ## Visualization
-<img src='images/KITTI_testset_000095.png' width=809 height=188>
-<img src='images/KITTI_testset_000181.png' width=809 height=188>
-<img src='images/KITTI_testset_000215.png' width=809 height=188>
+* KITTI
+<img src='images/KITTI_testset_000095.png' width=805>
+<img src='images/KITTI_testset_000181.png' width=805>
+
+* WAYMO
+<p float="left">
+<img src='images/WAYMO_valset_057159.png' width=400>
+<img src='images/WAYMO_valset_088660.png' width=400>
+</p>
 
 ## Distance Decomposition
-<img src='images/comp.png' width=809 height=255>
+<img src='images/comp.png' width=805>
 
 ## Installation
 
