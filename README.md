@@ -1,5 +1,5 @@
 # MonoRCNN
-MonoRCNN is a monocular 3D object detection method for automonous driving, published at ICCV 2021. This project is an implementation of MonoRCNN.
+MonoRCNN is a monocular 3D object detection method for autonomous driving, published at ICCV 2021. This project is an implementation of MonoRCNN.
 
 ## Related Link
 * [Video demo (KITTI)](https://www.youtube.com/watch?v=46lToJSagcg)
