@@ -11,12 +11,6 @@ MonoRCNN is a monocular 3D object detection method for autonomous driving, publi
 <img src='images/KITTI_testset_000095.png' width=805>
 <img src='images/KITTI_testset_000181.png' width=805>
 
-* WAYMO
-<p float="left">
-<img src='images/WAYMO_valset_057159.png' width=400>
-<img src='images/WAYMO_valset_088660.png' width=400>
-</p>
-
 ## Installation
 
 * Python 3.6
