@@ -35,8 +35,6 @@ Organize the downloaded files as follows:
 │   │   │   ├── ...
 ```
 
-* [Waymo val](https://drive.google.com/file/d/1xWhnE0Sa1HpF-UwBLdKbP22Am5m1p2vW/view?usp=sharing)
-
 ## Test
 ```
 cd projects/MonoRCNN
