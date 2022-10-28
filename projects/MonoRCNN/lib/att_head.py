@@ -294,7 +294,7 @@ class ATTHead(nn.Module):
         for i in range(self.num_classes):
             index = gt_classes == i
             pred_kpts_trans[index, :] = pred_kpts[index, (self.num_kpts * 2 + 1) * i:(self.num_kpts * 2 + 1) * (i + 1)]
-        pred_cen_trans_uncer = pred_kpts_trans[:, self.num_kpts * 2:]
+        pred_cens_trans_uncer = pred_kpts_trans[:, self.num_kpts * 2:]
         pred_kpts_trans = pred_kpts_trans[:, :self.num_kpts * 2]
         
         loss_kpt = smooth_l1_loss(
@@ -309,8 +309,8 @@ class ATTHead(nn.Module):
             self.smooth_l1_beta,
             reduction="none",
         )
-        loss_cen = loss_cen * ((-pred_cen_trans_uncer).exp())
-        return (loss_cen.sum() + pred_cen_trans_uncer.sum()) / self.num_regions, loss_kpt.sum() / (self.num_regions * self.num_kpts)
+        loss_cen = loss_cen * ((-pred_cens_trans_uncer).exp())
+        return (loss_cen.sum() + pred_cens_trans_uncer.sum()) / self.num_regions, loss_kpt.sum() / (self.num_regions * self.num_kpts)
 
     def kpt_rcnn_inference(self, pred_kpts, pred_instances):
         num_instances_per_image = [len(i) for i in pred_instances]

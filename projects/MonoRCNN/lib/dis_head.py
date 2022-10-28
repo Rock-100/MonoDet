@@ -24,6 +24,11 @@ Registry for box heads, which make box predictions from per-region features.
 The registered object will be called with `obj(cfg, input_shape)`.
 """
 
+from lib.bivariate_Laplace_distribution import(
+    bivariate_Laplace_loss,
+    bivariate_Laplace_cov,
+)
+
 def build_dis_head(cfg, input_shape):
     """
     Build a box head defined by `cfg.MODEL.ROI_BOX_HEAD.NAME`.
@@ -91,14 +96,18 @@ class DISHead(nn.Module):
         self.num_classes = num_classes
         self.num_regions = num_regions
         
-        self.H_layer = Linear(fc_dim_final, self.num_classes * 2)
+        self.H_layer = Linear(fc_dim_final, self.num_classes)
         nn.init.normal_(self.H_layer.weight, std=0.001)
         nn.init.constant_(self.H_layer.bias, 0)
 
         self.scale = 700.0
-        self.hrec_layer = Linear(fc_dim_final, self.num_classes * 2)
+        self.hrec_layer = Linear(fc_dim_final, self.num_classes)
         nn.init.normal_(self.hrec_layer.weight, std=0.001)
         nn.init.constant_(self.hrec_layer.bias, 0)
+
+        self.cov_layer = Linear(fc_dim_final, self.num_classes * 3)
+        nn.init.normal_(self.cov_layer.weight, std=0.001)
+        nn.init.constant_(self.cov_layer.bias, 0)
         
     @classmethod
     def from_config(cls, cfg, input_shape):
@@ -156,90 +165,75 @@ class DISHead(nn.Module):
         x = self.layers(x)
         pred_Hs = self.H_layer(x)
         pred_hrecs = self.hrec_layer(x)
+        pred_covs = self.cov_layer(x)
         if self.training:
             return {
-                "loss_H": self.H_rcnn_loss(pred_Hs, instances),
-                "loss_hrec": self.hrec_rcnn_loss(pred_hrecs, instances),
+                "loss_dis": self.dis_rcnn_loss(pred_Hs, pred_hrecs, pred_covs, instances),
             }
         else:
-            self.H_rcnn_inference(pred_Hs, instances)
-            self.hrec_rcnn_inference(pred_hrecs, instances)
+            self.dis_rcnn_inference(pred_Hs, pred_hrecs, pred_covs, instances)
             return instances
 
-    def H_rcnn_loss(self, pred_Hs, instances):
+    def dis_rcnn_loss(self, pred_Hs, pred_hrecs, pred_covs, instances):
         gt_dims = []
-        gt_classes = []
-        for instances_per_image in instances:
-            gt_dims.append(instances_per_image.gt_dims)
-            gt_classes.append(instances_per_image.gt_classes)
-        gt_dims = cat(gt_dims, dim=0)
-        gt_Hs = gt_dims[:, 0:1]
-        gt_classes = cat(gt_classes, dim=0)
-        pred_Hs_trans = torch.cuda.FloatTensor(gt_Hs.shape[0], 2)
-        for i in range(self.num_classes):
-            index = gt_classes == i
-            pred_Hs_trans[index, :] = pred_Hs[index, 2 * i:2 * (i + 1)]
-        pred_H_uncers_trans = pred_Hs_trans[:, 1:2]
-        pred_Hs_trans = pred_Hs_trans[:, 0:1]
-        loss_H = smooth_l1_loss(
-            pred_Hs_trans,
-            gt_Hs,
-            self.smooth_l1_beta,
-            reduction="none",
-        )
-        loss_H = loss_H * ((-pred_H_uncers_trans).exp())
-        return (loss_H.sum() + pred_H_uncers_trans.sum()) / self.num_regions
-
-    def H_rcnn_inference(self, pred_Hs, pred_instances):
-        num_instances_per_image = [len(i) for i in pred_instances]
-        pred_Hs = pred_Hs.split(num_instances_per_image)
-        for Hs_per_image, instances_per_image in zip(pred_Hs, pred_instances):
-            classes_per_image = instances_per_image.pred_classes
-            pred_Hs_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 2)
-            for i in range(self.num_classes):
-                index = classes_per_image == i
-                pred_Hs_per_image[index, :] = Hs_per_image[index, 2 * i:2 * (i + 1)]
-            pred_Hs_per_image = pred_Hs_per_image[:, 0:1]
-            instances_per_image.pred_Hs = pred_Hs_per_image
-
-    def hrec_rcnn_loss(self, pred_hrecs, instances):
         gt_proj_hs = []
         gt_classes = []
         for instances_per_image in instances:
+            gt_dims.append(instances_per_image.gt_dims)
             gt_proj_hs.append(instances_per_image.gt_proj_hs)
             gt_classes.append(instances_per_image.gt_classes)
+        gt_dims = cat(gt_dims, dim=0)
+        gt_Hs = gt_dims[:, 0:1]
         gt_proj_hs = cat(gt_proj_hs, dim=0).unsqueeze(-1)
         gt_hrecs = self.scale / gt_proj_hs
         gt_classes = cat(gt_classes, dim=0)
-        pred_hrecs_trans = torch.cuda.FloatTensor(gt_hrecs.shape[0], 2)
+
+        pred_Hs_trans = torch.cuda.FloatTensor(gt_Hs.shape[0], 1)
         for i in range(self.num_classes):
             index = gt_classes == i
-            pred_hrecs_trans[index, :] = pred_hrecs[index, 2 * i:2 * (i + 1)]
-        pred_hrec_uncers_trans = pred_hrecs_trans[:, 1:2]
-        pred_hrecs_trans = pred_hrecs_trans[:, 0:1]
-        loss_hrec = smooth_l1_loss(
-            pred_hrecs_trans,
-            gt_hrecs,
-            self.smooth_l1_beta,
-            reduction="none",
-        )
-        loss_hrec = loss_hrec * ((-pred_hrec_uncers_trans).exp())
-        return (loss_hrec.sum() + pred_hrec_uncers_trans.sum()) / self.num_regions
+            pred_Hs_trans[index, :] = pred_Hs[index, i:i + 1]
 
-    def hrec_rcnn_inference(self, pred_hrecs, pred_instances):
+        pred_hrecs_trans = torch.cuda.FloatTensor(gt_Hs.shape[0], 1)
+        for i in range(self.num_classes):
+            index = gt_classes == i
+            pred_hrecs_trans[index, :] = pred_hrecs[index, i:i + 1]
+
+        pred_covs_trans = torch.cuda.FloatTensor(gt_Hs.shape[0], 3)
+        for i in range(self.num_classes):
+            index = gt_classes == i
+            pred_covs_trans[index, :] = pred_covs[index, 3 * i:3 * (i + 1)]
+
+        loss_dis = bivariate_Laplace_loss(
+            pred_Hs_trans,
+            pred_hrecs_trans,
+            pred_covs_trans,
+            gt_Hs,
+            gt_hrecs,
+        )
+        return loss_dis.sum() / self.num_regions
+
+    def dis_rcnn_inference(self, pred_Hs, pred_hrecs, pred_covs, pred_instances):
         num_instances_per_image = [len(i) for i in pred_instances]
+        pred_Hs = pred_Hs.split(num_instances_per_image)
         pred_hrecs = pred_hrecs.split(num_instances_per_image)
-        for hrecs_per_image, instances_per_image in zip(pred_hrecs, pred_instances):
+        pred_covs = pred_covs.split(num_instances_per_image)
+
+        for Hs_per_image, hrecs_per_image, covs_per_image, instances_per_image in zip(pred_Hs, pred_hrecs, pred_covs, pred_instances):
             classes_per_image = instances_per_image.pred_classes
-            pred_hrecs_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 2)
+            pred_Hs_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 1)
+            pred_hrecs_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 1)
+            pred_covs_per_image = torch.cuda.FloatTensor(classes_per_image.shape[0], 3)
             for i in range(self.num_classes):
                 index = classes_per_image == i
-                pred_hrecs_per_image[index, :] = hrecs_per_image[index, 2 * i:2 * (i + 1)]
-            pred_hrec_uncers_per_image = pred_hrecs_per_image[:, 1:2]
-            pred_hrecs_per_image = pred_hrecs_per_image[:, 0:1]
+                pred_Hs_per_image[index, :] = Hs_per_image[index, i:i + 1]
+                pred_hrecs_per_image[index, :] = hrecs_per_image[index, i:i + 1]
+                pred_covs_per_image[index, :] = covs_per_image[index, 3 * i:3 * (i + 1)]
+                
+            instances_per_image.pred_Hs = pred_Hs_per_image
             instances_per_image.pred_hrecs = pred_hrecs_per_image / self.scale
-            instances_per_image.pred_hrec_uncers = pred_hrec_uncers_per_image.exp() / self.scale
-
+            pred_sigmas_per_image = bivariate_Laplace_cov(pred_covs_per_image)
+            instances_per_image.pred_hrec_uncers = (0.5 * pred_sigmas_per_image[:, 1, 1])**0.5 / self.scale
+            
     @property
     def output_shape(self):
         """

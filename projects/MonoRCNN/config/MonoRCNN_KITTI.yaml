@@ -5,7 +5,7 @@ INPUT:
   CONS_SIZE: (512, 1760)
 TRAINING:
   FLIP_PROB: 0.5
-  PMD_PROB: 0.5
+  PMD_PROB: 1.0
   MIN_VIS: 0.3
   MIN_HEIGHT: 22
   POS_LABELS: ['Car', 'Pedestrian', 'Cyclist']
