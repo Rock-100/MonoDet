@@ -43,6 +43,8 @@ Organize the downloaded files as follows:
 │   │   │   ├── ...
 ```
 
+* [Waymo](https://drive.google.com/file/d/1AbPy8GBi8siycbnliFlWP_tM7AHiTuV7/view?usp=sharing)
+
 ## Test
 ```
 cd projects/MonoRCNN
