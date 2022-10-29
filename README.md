@@ -43,7 +43,7 @@ Organize the downloaded files as follows:
 │   │   │   ├── ...
 ```
 
-* [Waymo](https://drive.google.com/file/d/1AbPy8GBi8siycbnliFlWP_tM7AHiTuV7/view?usp=sharing)
+* [Waymo](https://drive.google.com/file/d/1fL3E3yqZbRd3va3kN-1j-1YlX61-Qo13/view?usp=sharing)
 
 ## Test
 ```
