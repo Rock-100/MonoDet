@@ -30,7 +30,7 @@ Please use the Detectron2 included in this project. To ignore fully occluded obj
 ## Dataset Preparation
 * [KITTI](projects/KITTI/README.md)
 
-## Model & Training Log
+## Model & Log
 * [KITTI val split](https://drive.google.com/file/d/1OEHSLqg7goXb483GRLvM-z96ZDzN7wdI/view?usp=sharing)
 
 Organize the downloaded files as follows:
